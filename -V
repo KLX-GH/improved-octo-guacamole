@@ -1,0 +1,52 @@
+# Function to check program version using registry access
+function CheckProgramVersionRegistry {
+    param([string]$programName)
+    
+    $installedVersion = (Get-ItemProperty -ErrorAction SilentlyContinue -Path "HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*") |
+        Where-Object { $_.DisplayName -eq $programName } |
+        Select-Object -ExpandProperty DisplayVersion
+
+    if ($installedVersion) {
+        Write-Host "Installed version: $installedVersion"
+    } else {
+        Write-Host "Program not found or version information not available."
+    }
+}
+
+# Function to check program version using wmic command
+function CheckProgramVersionWmic {
+    param([string]$programName)
+    
+    $installedVersion = (wmic product where "Name='$programName'" get Version /value) -replace "Version=",""
+
+    if ($installedVersion -ne $null) {
+        Write-Host "Installed version: $installedVersion"
+    } else {
+        Write-Host "Program not found or version information not available."
+    }
+}
+
+# Prompt for programs to check
+$programs = @()
+$programCount = Read-Host "Enter the number of programs you want to check:"
+
+for ($i = 1; $i -le $programCount; $i++) {
+    $program = Read-Host "Enter program name $i:"
+    $programs += $program
+}
+
+# Prompt for admin privileges
+$isAdmin = Read-Host "Do you have admin privileges? (Y/N):"
+$isAdmin = $isAdmin -eq "Y" -or $isAdmin -eq "y"
+
+# Check program versions
+foreach ($program in $programs) {
+    Write-Host "Checking $program..."
+    if ($isAdmin) {
+        CheckProgramVersionRegistry -programName $program
+    } else {
+        CheckProgramVersionWmic -programName $program
+        Write-Host "Note: The method used may not work for all programs without admin privileges."
+    }
+    Write-Host
+}
